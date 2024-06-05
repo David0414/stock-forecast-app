@@ -5,11 +5,13 @@ from prophet import Prophet
 from prophet.plot import plot_plotly
 from plotly import graph_objs as go
 import warnings
+import numpy as np
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 START = "2015-01-01"
 TODAY = date.today().strftime("%Y-%m-%d")
+TRAIN_END = "2023-12-31"
 
 st.title('Stock Forecast App')
 
@@ -67,3 +69,57 @@ if data is not None:
     st.write("Forecast components")
     fig2 = m.plot_components(forecast)
     st.write(fig2)
+
+    # Añadir la función para calcular el MAPE
+    def calculate_mape(actual, predicted):
+        return np.mean(np.abs((actual - predicted) / actual)) * 100
+
+    # Alinear las fechas
+    forecast_filtered = forecast.set_index('ds').loc[data['Date']]
+    actual_filtered = data.set_index('Date').loc[forecast_filtered.index]
+
+    # Calcular el MAPE
+    mape = calculate_mape(actual_filtered['Close'], forecast_filtered['yhat'])
+
+    # Mostrar el MAPE en la aplicación
+    st.subheader('Error del pronóstico')
+    st.write(f'Mean Absolute Percentage Error (MAPE): {mape:.2f}%')
+
+# Apartado adicional para predicciones hasta 2023 y comparación con 2024
+st.title('Projection and Comparison for 2024')
+
+train_data = data[data['Date'] <= TRAIN_END]
+df_train = train_data[['Date', 'Close']]
+df_train = df_train.rename(columns={"Date": "ds", "Close": "y"})
+
+m = Prophet()
+m.fit(df_train)
+future = m.make_future_dataframe(periods=365)  # Proyectar para el año 2024
+forecast = m.predict(future)
+
+st.write('Prediction Chart for 2024')
+fig1 = plot_plotly(m, forecast)
+st.plotly_chart(fig1)
+
+st.write("Prediction Components")
+fig2 = m.plot_components(forecast)
+st.write(fig2)
+
+# Comparar las predicciones con los datos reales de 2024
+if date.today().year == 2024:
+    real_2024 = data[data['Date'] > TRAIN_END]
+    if not real_2024.empty:
+        # Alinear las fechas
+        forecast_2024 = forecast.set_index('ds').loc[real_2024['Date']]
+        real_2024 = real_2024.set_index('Date').loc[forecast_2024.index]
+
+        # Calcular el MAPE
+        mape = calculate_mape(real_2024['Close'], forecast_2024['yhat'])
+
+        # Mostrar el MAPE en la aplicación
+        st.subheader('Error percentage for 2024')
+        st.write(f'Mean Absolute Percentage Error (MAPE): {mape:.2f}%')
+    else:
+        st.subheader('No hay datos reales para 2024 para comparar.')
+else:
+    st.subheader('Esperando datos de 2024 para comparar.')
