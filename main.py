@@ -4,6 +4,7 @@ import yfinance as yf
 from prophet import Prophet
 from prophet.plot import plot_plotly
 from plotly import graph_objs as go
+import plotly.express as px
 import warnings
 import numpy as np
 
@@ -66,9 +67,7 @@ if data is not None:
     fig1 = plot_plotly(m, forecast)
     st.plotly_chart(fig1)
 
-    st.write("Forecast components")
-    fig2 = m.plot_components(forecast)
-    st.write(fig2)
+    
 
     # Añadir la función para calcular el MAPE
     def calculate_mape(actual, predicted):
@@ -101,9 +100,7 @@ st.write('Prediction Chart for 2024')
 fig1 = plot_plotly(m, forecast)
 st.plotly_chart(fig1)
 
-st.write("Prediction Components")
-fig2 = m.plot_components(forecast)
-st.write(fig2)
+
 
 # Comparar las predicciones con los datos reales de 2024
 if date.today().year == 2024:
@@ -119,6 +116,24 @@ if date.today().year == 2024:
         # Mostrar el MAPE en la aplicación
         st.subheader('Error percentage for 2024')
         st.write(f'Mean Absolute Percentage Error (MAPE): {mape:.2f}%')
+
+        # Graficar datos reales y predicciones usando barras
+        comparison_df = forecast_2024.copy()
+        comparison_df['Real'] = real_2024['Close']
+
+        fig = go.Figure(data=[
+            go.Bar(name='Real Data', x=comparison_df.index, y=comparison_df['Real'], marker_color='blue'),
+            go.Bar(name='Predicted Data', x=comparison_df.index, y=comparison_df['yhat'], marker_color='red')
+        ])
+
+        fig.update_layout(barmode='group', title='Real vs Predicted Data for 2024', xaxis_title='Date', yaxis_title='Price')
+        st.plotly_chart(fig)
+
+        # Gráfico de círculo para mostrar el porcentaje de error
+        labels = ['Accurate', 'Error']
+        values = [100 - mape, mape]
+        pie_chart = px.pie(values=values, names=labels, title='Error Percentage for 2024', color_discrete_sequence=['green', 'red'])
+        st.plotly_chart(pie_chart)
     else:
         st.subheader('No hay datos reales para 2024 para comparar.')
 else:
